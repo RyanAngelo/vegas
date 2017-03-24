@@ -30,6 +30,7 @@ public:
 	void printMoney();
 	int takeLargestBill();
 	std::vector<int> getMoney();
+	void cleanupRound();
 };
 
 #endif

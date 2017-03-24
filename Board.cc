@@ -62,3 +62,8 @@ int Board::takeLargestBill(){
 vector<int> Board::getMoney(){
 	return money;
 }
+
+void Board::cleanupRound(){
+	money.clear();
+	dice.clear();
+}

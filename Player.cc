@@ -81,3 +81,7 @@ int Player::getTotalMoney(){
 	}
 	return total;
 }
+
+void Player::cleanupRound(){
+	myDice.clear();
+}

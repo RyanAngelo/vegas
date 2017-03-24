@@ -42,6 +42,7 @@ public:
 	void takeMoney(int);
 	//Get the total amount of money won by player
 	int getTotalMoney();
+	void cleanupRound();
 };
 
 #endif
