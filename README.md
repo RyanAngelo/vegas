@@ -1,2 +1,2 @@
 # vegas
-Simple command line C++ version of the dice rolling game Vegas
+A command line C++ version of the dice rolling game Vegas
