@@ -1,16 +1,15 @@
-// Board.h
-#ifndef __PLAYER_H_INCLUDED__
-#define __PLAYER_H_INCLUDED__
+// Player.h
+#ifndef VEGAS_PLAYER_H
+#define VEGAS_PLAYER_H
 
 #include <vector>
 #include <string>
+#include <memory>
 #include <iostream>
 #include "Die.h"
 #include "Board.h"
 
-using std::string;
-
-class Player {
+class Player : public std::enable_shared_from_this<Player> {
 private:
 	std::string name;
 	int identifier;
@@ -19,29 +18,31 @@ private:
 	
 public:
 	
-	Player(std::string playerName="Player", int identifierNum=69){
-		name=playerName;
-		identifier=identifierNum;
-	}
-	
-	//Generate a hand of dice
-	void grabDice(int);
-	//Add dice to a board
-	void addDiceToBoard(std::vector<Board>&, int);
-	//Roll all dice, giving all ACTIVE dice new values
+	explicit Player(std::string playerName = "Player", int identifierNum = 1)
+		: name(std::move(playerName))
+		, identifier(identifierNum) {}
+
+	// Rule of five - explicitly default these
+	Player(const Player&) = default;
+	Player& operator=(const Player&) = default;
+	Player(Player&&) noexcept = default;
+	Player& operator=(Player&&) noexcept = default;
+	~Player() = default;
+
+	// Dice management
+	void grabDice(int numberOfDice);
+	void addDiceToBoard(std::vector<Board>& boards, int boardId);
 	void rollAllDice();
-	//Return whether the player has active dice
-	bool hasActiveDice();
-	//Place chosen dice on selected board
-	void placeChosenDice(int);
-	//Get all dice associated with the player
-	std::vector<Die> getAllDice();
-	string getPlayerName();
-	int getPlayerIdentifier();
-	//take money and add it to the existing player money
-	void takeMoney(int);
-	//Get the total amount of money won by player
-	int getTotalMoney();
+	bool hasActiveDice() const;
+	const std::vector<Die>& getAllDice() const { return myDice; }
+
+	// Player information
+	const std::string& getPlayerName() const { return name; }
+	int getPlayerIdentifier() const { return identifier; }
+
+	// Money management
+	void takeMoney(int moneyIn);
+	int getTotalMoney() const;
 	void cleanupRound();
 };
 

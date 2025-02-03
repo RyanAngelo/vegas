@@ -9,6 +9,9 @@
 #include <string>
 #include <map>
 #include <tuple>
+#include <memory>
+#include <algorithm>
+#include <stdexcept>
 
 #include "Die.h"
 #include "Player.h"
@@ -22,46 +25,44 @@ using std::string;
 using std::map;
 
 //Give all players that are in the game dice to start out with.
-void giveAllPlayersDice( vector<Player>& players, int numberOfDice) {
-	vector<Player>::iterator pIt;
-	for (pIt = players.begin(); pIt != players.end(); ++pIt) {
-		pIt->grabDice(numberOfDice);
-		cout << pIt->getPlayerName() 
-			<< " has " << pIt->getAllDice().size()
+void giveAllPlayersDice(std::vector<std::shared_ptr<Player>>& players, int numberOfDice) {
+	for (auto& player : players) {
+		player->grabDice(numberOfDice);
+		cout << player->getPlayerName() 
+			<< " has " << player->getAllDice().size()
 			<< " dice in hand " << endl;
 	}
 }
 
 //Give the boards money
-void giveBoardsMoney( vector<Board>& boards) {
-	vector<Board>::iterator bIt;
-	for ( bIt = boards.begin(); bIt != boards.end(); ++bIt) {
-		while(bIt->getTotalMoney()<50000){
-			bIt->placeMoney();
+void giveBoardsMoney(std::vector<Board>& boards) {
+	for (auto& board : boards) {
+		while(board.getTotalMoney()<50000){
+			board.placeMoney();
 		}
-		cout << "Money on Board #"<<bIt->getBoardId(); bIt->printMoney();
+		cout << "Money on Board #"<<board.getBoardId(); board.printMoney();
 		cout << endl;
 	}
 }
 
 //Get the number of players that are going to be playing from the user
-int getNumberOfPlayers(){
+int getNumberOfPlayers() {
 	int numberOfPlayers;
-	cout << "How many players?: ";
-	cin >> numberOfPlayers;
-	if(numberOfPlayers>6){
-		cout << "The valid number of players is between 2 and 6" << endl;
-		getNumberOfPlayers();
+	while (true) {
+		cout << "How many players? (2-6): ";
+		if (cin >> numberOfPlayers && numberOfPlayers >= 2 && numberOfPlayers <= 6) {
+			return numberOfPlayers;
+		}
+		cout << "Please enter a number between 2 and 6" << endl;
+		cin.clear();
+		cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 	}
-	return numberOfPlayers;
 }
 
-bool someoneHasDice(const vector<Board>& boards, const vector<Player>& players, int numDicePerPlayer){
-	unsigned int numDiceOnBoards = 0;
-	vector<Board>::const_iterator bIt;
-	for (bIt = boards.begin(); bIt != boards.end(); ++bIt) {
-		numDiceOnBoards = numDiceOnBoards+bIt->totalDice();
-	}
+bool someoneHasDice(const std::vector<Board>& boards, const std::vector<std::shared_ptr<Player>>& players, int numDicePerPlayer) {
+	size_t numDiceOnBoards = std::accumulate(boards.begin(), boards.end(), 0,
+		[](size_t sum, const Board& board) { return sum + board.totalDice(); });
+		
 	cout << "Total Number of Dice on the Boards "<<numDiceOnBoards <<endl;
 	cout << "Total Number of Players in Game: "<<players.size() <<endl;
 	if(numDiceOnBoards == (players.size() * numDicePerPlayer) ){
@@ -72,76 +73,67 @@ bool someoneHasDice(const vector<Board>& boards, const vector<Player>& players, 
 	}
 }
 
-vector<Player> createPlayers(int numberOfPlayers){
-	vector<Player> activePlayers;
+std::vector<std::shared_ptr<Player>> createPlayers(int numberOfPlayers) {
+	std::vector<std::shared_ptr<Player>> activePlayers;
+	activePlayers.reserve(numberOfPlayers);
+	
 	for(int pCount=1; pCount<=numberOfPlayers; pCount++){
 		string playerName;
 		cout << "Player " << pCount << " please enter your name: ";
 		cin >> playerName;
 		cout << "Welcome, " << playerName << endl;
-		activePlayers.push_back(Player(playerName,pCount));
+		activePlayers.push_back(std::make_shared<Player>(playerName,pCount));
 	}
 	return activePlayers;
 }
 
-vector<Board> createBoards(){
-	vector<Board> activeBoards;
+std::vector<Board> createBoards(){
+	std::vector<Board> activeBoards;
+	activeBoards.reserve(6);
 	for(int bCount=1; bCount<=6; bCount++){
-		activeBoards.push_back(Board(bCount));
+		activeBoards.emplace_back(bCount);
 	}
 	return activeBoards;
 }
 
-void printDicePerPlayer(map<class Player*, int> playerMappings){
-	map<class Player*, int>::iterator mapIt;
-	for ( mapIt = playerMappings.begin(); mapIt != playerMappings.end(); mapIt++ )
-	{
-	    cout << "\t" << mapIt->first->getPlayerName()  // string (key)
-	              << ':'
-	              << mapIt->second   // string's value 
-	              << std::endl ;
-	}
+void printDicePerPlayer(const std::map<std::shared_ptr<Player>, int>& playerMappings) {
+    for (const auto& [player, count] : playerMappings) {
+        std::cout << "\t" << player->getPlayerName() 
+                 << ": " << count << std::endl;
+    }
 }
 
 
 //Print the player status (total money)
-void getPlayerStatus(vector<Player>& players){
-	vector<Player>::iterator pIt;
-	for ( pIt = players.begin(); pIt != players.end(); pIt++ )
-	{
-	    cout << "\t" << pIt->getPlayerName()
+void getPlayerStatus(const std::vector<std::shared_ptr<Player>>& players){
+	for (const auto& player : players) {
+	    cout << "\t" << player->getPlayerName()
 	              << ':'
-	              << pIt->getTotalMoney()
+	              << player->getTotalMoney()
 	              << std::endl;
 	}
 }
 
 //Get the number of dice per player on a board
-map<class Player*, int> getDicePerPlayer(Board& board){
-	vector<Die> dice = board.getDice();
-	map<class Player*, int> playerMappings;
-	vector<Die>::iterator dIt;
-	for (dIt = dice.begin(); dIt != dice.end(); ++dIt) {
-		Die& playerDie = *dIt;
-		if( playerMappings.count(playerDie.getOwner()) ){
-			playerMappings[playerDie.getOwner()]=playerMappings[playerDie.getOwner()]+1;
-		}
-		else{
-			playerMappings[playerDie.getOwner()]=1;
-		}
-	}
-	return playerMappings;
+std::map<std::shared_ptr<Player>, int> getDicePerPlayer(const Board& board) {
+    const auto& dice = board.getDice();
+    std::map<std::shared_ptr<Player>, int> playerMappings;
+    
+    for (const auto& die : dice) {
+        auto owner = die.getOwner();
+        playerMappings[owner]++;
+    }
+    return playerMappings;
 }
 
-void getBoardStatus(vector<Board>& boards){
+void getBoardStatus(const std::vector<Board>& boards){
 	cout << "----Board Status----" << endl;
-	vector<Board>::iterator bIt;
-	for (bIt = boards.begin(); bIt != boards.end(); ++bIt) {
-		cout << "Board "<<bIt->getBoardId()<< ": "
-			<<"\n\tTotal Dice: "<<bIt->totalDice() << endl;
-		getDicePerPlayer(*bIt);
+	for (const auto& board : boards) {
+		cout << "Board "<<board.getBoardId()<< ": "
+			<<"\n\tTotal Dice: "<<board.totalDice() << endl;
+		getDicePerPlayer(board);
 		vector<int>::iterator mIt;
-		vector<int> money = bIt->getMoney();
+		vector<int> money = board.getMoney();
 		cout << "\tMoney: ";
 		for ( mIt = money.begin(); mIt != money.end(); ++mIt) {
 			cout<<*mIt<<" ";
@@ -153,114 +145,107 @@ void getBoardStatus(vector<Board>& boards){
 /* Given the current players on the board that haven't tied or been paid out
 *  get the next player that should receive a payout from the board
 */
-class Player* findPlayerWithMostDice(map<class Player*, int>& playerMappings){
-	typedef map<class Player*, int>::iterator iter;
-	
-	iter it = playerMappings.begin();
-	iter end = playerMappings.end();
-	
-	int max_value = it->second;
-	class Player* maxPlayer = it->first;
-	
-	bool duplicateFound=false;
-	for( it = playerMappings.begin(); it != playerMappings.end(); ) {
-	    if(it->second == max_value && it->first != maxPlayer) {
-			cout << "Duplicate dice counts were found!"<<endl;
-			duplicateFound=true;
-	        it=playerMappings.erase(it);
-	    }
-		else if(it->second > max_value && it->first != maxPlayer){
-			max_value=it->second;
-			maxPlayer=it->first;
-		}
-		else{
-			++it;
-		}
-	}
-	if(duplicateFound){
-		playerMappings.erase(maxPlayer);
-		if(playerMappings.size()>0){	
-			findPlayerWithMostDice(playerMappings);
-		}
-		else{
-			return NULL;
-		}
-	}
-	return maxPlayer;
+std::shared_ptr<Player> findPlayerWithMostDice(std::map<std::shared_ptr<Player>, int>& playerMappings) {
+    if (playerMappings.empty()) {
+        return nullptr;
+    }
+    
+    auto maxIt = std::max_element(playerMappings.begin(), playerMappings.end(),
+        [](const auto& a, const auto& b) { return a.second < b.second; });
+    
+    int maxCount = maxIt->second;
+    auto maxPlayer = maxIt->first;
+    
+    // Check for ties
+    bool hasTie = std::any_of(playerMappings.begin(), playerMappings.end(),
+        [&](const auto& pair) { 
+            return pair.second == maxCount && pair.first != maxPlayer;
+        });
+    
+    if (hasTie) {
+        playerMappings.clear();  // Clear all in case of tie
+        return nullptr;
+    }
+    
+    playerMappings.erase(maxIt);
+    return maxPlayer;
 }
 
-//TODO: Currently causing segfault when called...
-void distributeMoney(vector<Board>& boards){
-	cout << "Distributing payout for "<<boards.size()<<" boards"<<endl;
-	vector<Board>::iterator boardIterator;	
-	for (boardIterator = boards.begin(); boardIterator != boards.end(); ++boardIterator) {
-		cout << "Distributing money for Board "<<boardIterator->getBoardId()<<endl;
-		map<class Player*, int> playerMappings = getDicePerPlayer(*boardIterator);
-		while(boardIterator->getTotalMoney()>0 && playerMappings.size()>0){
-			class Player* playerToGetMoney = findPlayerWithMostDice(playerMappings);
-			//It's possible that no one will get any money on the board
-			if(playerToGetMoney==NULL){
-				cout<<"It's all tied up. No one gets any money for board "
-					<<boardIterator->getBoardId()<<endl;
-				continue;
-			}
-			//This person already got a payout. Remove them.
-			playerMappings.erase(playerToGetMoney);
-			cout<<"Player "<<playerToGetMoney->getPlayerName()<<" is getting a payout!";
-			cout<<endl;
-			playerToGetMoney->takeMoney(boardIterator->takeLargestBill());
-		}
-	}
+void distributeMoney(std::vector<Board>& boards, std::vector<std::shared_ptr<Player>>& players) {
+    std::cout << "Distributing payout for " << boards.size() << " boards" << std::endl;
+    
+    for (auto& board : boards) {
+        std::cout << "Distributing money for Board " << board.getBoardId() << std::endl;
+        auto playerMappings = getDicePerPlayer(board);
+        
+        while (board.getTotalMoney() > 0 && !playerMappings.empty()) {
+            auto winner = findPlayerWithMostDice(playerMappings);
+            if (!winner) {
+                std::cout << "It's all tied up. No one gets any money for board "
+                         << board.getBoardId() << std::endl;
+                break;
+            }
+            
+            int amount = board.takeLargestBill();
+            std::cout << "Player " << winner->getPlayerName() 
+                     << " wins $" << amount << std::endl;
+            winner->takeMoney(amount);
+        }
+    }
 }
 
 int main() {
-	int numDicePerPlayer=1;
-	int numberOfRounds=2;
+	constexpr int numDicePerPlayer = 1;
+	constexpr int numberOfRounds = 2;
 	
-	int numberOfPlayers=getNumberOfPlayers();
-	vector<Player> players=createPlayers(numberOfPlayers);
-	vector<Board> boards=createBoards();
+	int numberOfPlayers = getNumberOfPlayers();
+	auto players = createPlayers(numberOfPlayers);
+	auto boards = createBoards();
 	
 	for( int round=0; round<numberOfRounds; ++round ){
+		cout << "\nRound " << (round + 1) << " begins!\n" << endl;
+		
 		giveAllPlayersDice(players, numDicePerPlayer);
 		giveBoardsMoney(boards);
 		while(someoneHasDice(boards, players, numDicePerPlayer)==true){
-			string playerAnswer="n";
-			vector<Player>::iterator pIt;
-			for (pIt = players.begin(); pIt != players.end(); ++pIt) {
-				if(pIt->hasActiveDice()==false){
-					cout << pIt->getPlayerName() << ", you have no dice left. Turn passes!" << endl;
+			for (auto& player : players) {
+				if(player->hasActiveDice()==false){
+					cout << player->getPlayerName() << ", you have no dice left. Turn passes!" << endl;
 					continue;
 				}
-				while(playerAnswer != "yes" && playerAnswer != "y"){
-					cout << pIt->getPlayerName() << ", ready to roll? (y or n)";
+				string playerAnswer;
+				do {
+					cout << player->getPlayerName() << ", ready to roll? (y/n): ";
 					cin >> playerAnswer;
-					cout << endl;
-				}
-				//A positive answer to roll dice has been received
-				pIt->rollAllDice();
-				cout << pIt->getPlayerName() << ", which dice group would you like to place? ";
-				cin >> playerAnswer;
-				int intPlayerAnswer = atoi(playerAnswer.c_str());
-				vector<Die> playerDice = pIt->getAllDice();
-				pIt->addDiceToBoard(boards, intPlayerAnswer);
+				} while(playerAnswer != "yes" && playerAnswer != "y");
+				
+				player->rollAllDice();
+				
+				int boardChoice;
+				do {
+					cout << player->getPlayerName() << ", which board (1-6)? ";
+					cin >> boardChoice;
+				} while(boardChoice < 1 || boardChoice > 6);
+				
+				player->addDiceToBoard(boards, boardChoice);
 				getBoardStatus(boards); //get board status after placing dice
 			}
 		}
-		distributeMoney(boards);
-		vector<Player>::iterator pIt;
-		for (pIt = players.begin(); pIt != players.end(); ++pIt) {
-			cout << pIt->getPlayerName()<<" : "<<pIt->getTotalMoney()<<endl;
+		distributeMoney(boards, players);
+		for (auto& player : players) {
+			cout << player->getPlayerName()<<" : "<<player->getTotalMoney()<<endl;
 			//Cleanup player dice
-			pIt->cleanupRound();
+			player->cleanupRound();
 		}
 		//Cleanup Board state
-		vector<Board>::iterator bIt;
-		for ( bIt = boards.begin(); bIt != boards.end(); ++bIt) {
-			bIt->cleanupRound();
+		for (auto& board : boards) {
+			board.cleanupRound();
 		}
+		
+		cout << "\nEnd of round " << (round + 1) << " standings:" << endl;
+		getPlayerStatus(players);
 	}
-	cout << "Game over!" << endl;
+	cout << "\nGame over! Final standings:" << endl;
 	getPlayerStatus(players);
 	players.clear();
 	boards.clear();

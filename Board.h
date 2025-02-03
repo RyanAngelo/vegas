@@ -1,12 +1,12 @@
 // Board.h
-#ifndef __BOARD_H_INCLUDED__
-#define __BOARD_H_INCLUDED__
+#ifndef VEGAS_BOARD_H
+#define VEGAS_BOARD_H
 
 #include <vector>
+#include <algorithm>
 #include "Die.h"
 
-class Board
-{
+class Board {
 private:
 	int boardId;
 	std::vector<Die> dice;
@@ -14,22 +14,26 @@ private:
 	
 public:
 	
-	Board(int bId=0){
-		boardId=bId;
-	}
-	
-	//sortMoney(money)
-	void sortMoney(std::vector<int>&); //Sort money from highest to lowest
-	//Place a single die on the board
-	int placeDie(Die&);
+	explicit Board(int bId = 0) 
+		: boardId(bId) {}
+
+	// Rule of five - explicitly default these
+	Board(const Board&) = default;
+	Board& operator=(const Board&) = default;
+	Board(Board&&) noexcept = default;
+	Board& operator=(Board&&) noexcept = default;
+	~Board() = default;
+
+	// Place a single die on the board
+	int placeDie(Die& playerDie);
 	void placeMoney();
-	int totalDice() const;
-	std::vector<Die> getDice();
-	int getBoardId();
-	int getTotalMoney();
-	void printMoney();
+	int totalDice() const { return dice.size(); }
+	const std::vector<Die>& getDice() const { return dice; }
+	int getBoardId() const { return boardId; }
+	int getTotalMoney() const;
+	void printMoney() const;
 	int takeLargestBill();
-	std::vector<int> getMoney();
+	const std::vector<int>& getMoney() const { return money; }
 	void cleanupRound();
 };
 

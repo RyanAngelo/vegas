@@ -1,11 +1,12 @@
-//Die.h
-#ifndef __DIE_H_INCLUDED__
-#define __DIE_H_INCLUDED__
+// Die.h
+#ifndef VEGAS_DIE_H
+#define VEGAS_DIE_H
 
 #include <vector>
 #include <random>
 #include <string>
 #include <iostream>
+#include <memory>
 
 class Player;
 
@@ -13,22 +14,29 @@ class Die {
 private:
 	int value;
 	bool played;
-	Player *owner;
+	std::shared_ptr<Player> owner;
 
 public:
-	
-	Die(int val=0, bool playedState=false){
-		value=val;
-		played=playedState;
-	}
+	Die(int val = 0, bool playedState = false) 
+		: value(val)
+		, played(playedState)
+		, owner(nullptr) {}
+		
+	// Rule of five - explicitly default these
+	Die(const Die&) = default;
+	Die& operator=(const Die&) = default;
+	Die(Die&&) noexcept = default;
+	Die& operator=(Die&&) noexcept = default;
+	~Die() = default;
+
 	//randomized roll, changes single die value value
 	int rollIt();
-	bool isPlayed();
-	void setPlayed(bool);
-	int getValue() const;
-	class Player* getOwner();
-	void setOwner(class Player*);
-	void printDieAscii();
+	bool isPlayed() const { return played; }
+	void setPlayed(bool isPlayed) { played = isPlayed; }
+	int getValue() const { return value; }
+	std::shared_ptr<Player> getOwner() const { return owner; }
+	void setOwner(std::shared_ptr<Player> dieOwner) { owner = dieOwner; }
+	void printDieAscii() const;
 };
 
-#endif
+#endif // VEGAS_DIE_H
