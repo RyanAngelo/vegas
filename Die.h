@@ -34,6 +34,7 @@ public:
 	bool isPlayed() const { return played; }
 	void setPlayed(bool isPlayed) { played = isPlayed; }
 	int getValue() const { return value; }
+	void setValue(int val) { value = val; }  // For testing purposes
 	std::shared_ptr<Player> getOwner() const { return owner; }
 	void setOwner(std::shared_ptr<Player> dieOwner) { owner = dieOwner; }
 	void printDieAscii() const;

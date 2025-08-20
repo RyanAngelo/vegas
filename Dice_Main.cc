@@ -131,7 +131,19 @@ void getBoardStatus(const std::vector<Board>& boards){
 	for (const auto& board : boards) {
 		cout << "Board "<<board.getBoardId()<< ": "
 			<<"\n\tTotal Dice: "<<board.totalDice() << endl;
-		getDicePerPlayer(board);
+		
+		// Show dice ownership
+		auto playerMappings = getDicePerPlayer(board);
+		if (!playerMappings.empty()) {
+			cout << "\tDice by player: ";
+			for (const auto& [player, count] : playerMappings) {
+				cout << player->getPlayerName() << "(" << count << ") ";
+			}
+			cout << endl;
+		} else {
+			cout << "\tNo dice placed yet" << endl;
+		}
+		
 		vector<int>::iterator mIt;
 		vector<int> money = board.getMoney();
 		cout << "\tMoney: ";
@@ -140,6 +152,28 @@ void getBoardStatus(const std::vector<Board>& boards){
 		}
 		cout << endl;
 	}
+}
+
+/* Remove all players who have tied dice counts according to Vegas rules */
+void removeTiedPlayers(std::map<std::shared_ptr<Player>, int>& playerMappings) {
+    std::map<int, std::vector<std::shared_ptr<Player>>> countGroups;
+    
+    // Group players by dice count
+    for (const auto& [player, count] : playerMappings) {
+        countGroups[count].push_back(player);
+    }
+    
+    // Remove all players in groups with more than one player (ties)
+    for (const auto& [count, players] : countGroups) {
+        if (players.size() > 1) {
+            std::cout << "Tie detected with " << count << " dice: ";
+            for (const auto& player : players) {
+                std::cout << player->getPlayerName() << " ";
+                playerMappings.erase(player);
+            }
+            std::cout << "- all tied players removed!" << std::endl;
+        }
+    }
 }
 
 /* Given the current players on the board that haven't tied or been paid out
@@ -153,37 +187,27 @@ std::shared_ptr<Player> findPlayerWithMostDice(std::map<std::shared_ptr<Player>,
     auto maxIt = std::max_element(playerMappings.begin(), playerMappings.end(),
         [](const auto& a, const auto& b) { return a.second < b.second; });
     
-    int maxCount = maxIt->second;
     auto maxPlayer = maxIt->first;
-    
-    // Check for ties
-    bool hasTie = std::any_of(playerMappings.begin(), playerMappings.end(),
-        [&](const auto& pair) { 
-            return pair.second == maxCount && pair.first != maxPlayer;
-        });
-    
-    if (hasTie) {
-        playerMappings.clear();  // Clear all in case of tie
-        return nullptr;
-    }
-    
     playerMappings.erase(maxIt);
     return maxPlayer;
 }
 
 void distributeMoney(std::vector<Board>& boards, std::vector<std::shared_ptr<Player>>& players) {
+    (void)players; // Suppress unused parameter warning
     std::cout << "Distributing payout for " << boards.size() << " boards" << std::endl;
     
     for (auto& board : boards) {
         std::cout << "Distributing money for Board " << board.getBoardId() << std::endl;
         auto playerMappings = getDicePerPlayer(board);
         
+        // First, remove all tied players according to Vegas rules
+        removeTiedPlayers(playerMappings);
+        
+        // Then distribute money to remaining players in order of dice count
         while (board.getTotalMoney() > 0 && !playerMappings.empty()) {
             auto winner = findPlayerWithMostDice(playerMappings);
             if (!winner) {
-                std::cout << "It's all tied up. No one gets any money for board "
-                         << board.getBoardId() << std::endl;
-                break;
+                break; // This shouldn't happen after removing ties
             }
             
             int amount = board.takeLargestBill();
@@ -195,8 +219,8 @@ void distributeMoney(std::vector<Board>& boards, std::vector<std::shared_ptr<Pla
 }
 
 int main() {
-	constexpr int numDicePerPlayer = 1;
-	constexpr int numberOfRounds = 2;
+	constexpr int numDicePerPlayer = 8;
+	constexpr int numberOfRounds = 4;
 	
 	int numberOfPlayers = getNumberOfPlayers();
 	auto players = createPlayers(numberOfPlayers);
@@ -221,11 +245,24 @@ int main() {
 				
 				player->rollAllDice();
 				
+				// Show available dice values to choose from
+				auto availableValues = player->getAvailableDiceValues();
+				if (availableValues.empty()) {
+					cout << player->getPlayerName() << " has no dice left!" << endl;
+					continue;
+				}
+				
+				cout << "Available dice values to place: ";
+				for (int value : availableValues) {
+					cout << value << " ";
+				}
+				cout << endl;
+				
 				int boardChoice;
 				do {
-					cout << player->getPlayerName() << ", which board (1-6)? ";
+					cout << player->getPlayerName() << ", choose which dice value to place (must be one you rolled): ";
 					cin >> boardChoice;
-				} while(boardChoice < 1 || boardChoice > 6);
+				} while(std::find(availableValues.begin(), availableValues.end(), boardChoice) == availableValues.end());
 				
 				player->addDiceToBoard(boards, boardChoice);
 				getBoardStatus(boards); //get board status after placing dice

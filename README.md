@@ -34,16 +34,100 @@ Players compete to win the most money by placing dice on different casino boards
 
 ### Prerequisites
 - C++ compiler with C++17 support
-- Standard library support
+- Google Test (for running tests)
+- CMake 3.16 or higher (optional, for CMake builds)
 
-### Compilation
+### Installing Dependencies
+
+#### Ubuntu/Debian
 ```bash
-g++ -std=c++17 *.cc -o vegas
+sudo apt-get update
+sudo apt-get install build-essential libgtest-dev cmake
 ```
 
-### Running the Game
+#### macOS
 ```bash
-./vegas
+brew install googletest cmake
+```
+
+#### Other Systems
+Build Google Test from source: https://github.com/google/googletest
+
+### Project Structure
+```
+vegas/
+├── main.cc           # Main game entry point
+├── Die.h/cc         # Die class
+├── Board.h/cc       # Board class  
+├── Player.h/cc      # Player class
+├── tests/           # Unit tests
+├── build/           # Build output directory
+├── Makefile         # Portable Makefile
+└── CMakeLists.txt   # CMake configuration
+```
+
+### Building with Make (Recommended)
+The Makefile automatically detects Google Test installation:
+
+```bash
+# Build and run tests
+make test
+
+# Build main game
+make all
+
+# Run the game
+./build/vegas
+
+# Show Google Test configuration
+make gtest-info
+
+# Clean build files
+make clean
+```
+
+### Building with CMake
+```bash
+# Create build directory
+mkdir -p build
+cd build
+
+# Configure and build
+cmake ..
+make
+
+# Run tests
+ctest
+
+# Run the game
+./bin/vegas
+```
+
+### Manual Build (if auto-detection fails)
+```bash
+# Create build directory
+mkdir -p build
+
+# Compile the project
+g++ -std=c++17 Board.cc Die.cc Player.cc main.cc -o build/vegas
+
+# For tests (adjust paths as needed)
+g++ -std=c++17 -I/path/to/gtest/include Board.cc Die.cc Player.cc tests/*.cpp -L/path/to/gtest/lib -lgtest -lgtest_main -pthread -o build/vegas_tests
+```
+
+## Testing
+
+### Running Tests
+```bash
+# Build tests
+cd build
+make vegas_tests
+
+# Run tests
+./bin/vegas_tests
+
+# Run tests with verbose output
+./bin/vegas_tests --gtest_verbose
 ```
 
 ## License

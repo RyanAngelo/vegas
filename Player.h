@@ -34,6 +34,7 @@ public:
 	void addDiceToBoard(std::vector<Board>& boards, int boardId);
 	void rollAllDice();
 	bool hasActiveDice() const;
+	std::vector<int> getAvailableDiceValues() const;
 	const std::vector<Die>& getAllDice() const { return myDice; }
 
 	// Player information

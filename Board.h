@@ -27,6 +27,7 @@ public:
 	// Place a single die on the board
 	int placeDie(Die& playerDie);
 	void placeMoney();
+	void placeMoney(int amount); // For testing purposes
 	int totalDice() const { return dice.size(); }
 	const std::vector<Die>& getDice() const { return dice; }
 	int getBoardId() const { return boardId; }
